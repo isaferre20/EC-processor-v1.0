@@ -9,6 +9,9 @@ from openpyxl.styles import PatternFill, Border, Alignment, Font, Protection
 from openpyxl.utils import range_boundaries
 from openpyxl.worksheet.cell_range import CellRange
 from copy import copy
+from threading import Timer
+import webbrowser
+
 
 app = Flask(__name__)
 
@@ -213,5 +216,10 @@ def download_file(filename):
     else:
         return "Error: File not found", 404
 
+def open_browser():
+    webbrowser.open_new("http://127.0.0.1:5000")
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Start the browser a moment after the server starts
+    Timer(1, open_browser).start()
+    app.run(debug=True)  # or app.run(port=5000) if debug mode is not needed
