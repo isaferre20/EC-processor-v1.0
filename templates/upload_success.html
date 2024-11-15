@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processo Completato - Idraulica Baretta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Global styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+                    }
+        body {
+font-family: 'Montserrat', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #eef2f7;
+            color: #2d3e50;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Container styling */
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            padding: 40px;
+            animation: fadeInUp 0.8s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Decorative circle */
+        .circle {
+            position: absolute;
+            top: -80px;
+            right: -80px;
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border-radius: 50%;
+            opacity: 0.15;
+        }
+
+        /* Title styling */
+        h1 {
+            font-size: 2.2rem;
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Success message */
+        p {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        /* Link and button styling */
+        .open-folder {
+            color: #007bff;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 1.05rem;
+            transition: color 0.3s ease, transform 0.2s;
+        }
+        .open-folder:hover {
+            color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .copy-button {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 8px;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        .copy-button:hover {
+            background-color: #0056b3;
+            transform: translateY(-3px);
+        }
+
+        /* Details section */
+        .details {
+            margin-top: 30px;
+            font-size: 0.95rem;
+            color: #555;
+            text-align: left;
+            padding: 20px;
+            background-color: #f8f9fc;
+            border-radius: 10px;
+            line-height: 1.6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        .details p {
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .details strong {
+            color: #2d3e50;
+            font-weight: 700;
+        }
+
+        /* Fade-in animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Folder path copied to clipboard!");
+            }).catch(() => {
+                alert("Failed to copy folder path.");
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="circle"></div> <!-- Decorative circle in the background -->
+        
+        <h1>Processo Completato!</h1>
+        <p></p>
+        <p>Il tuo PDF è stato processato e salvato al seguente link:</p>
+        
+        <a href="file://{{ folder_path }}" class="open-folder" target="_blank">Apri Cartella</a>
+        
+        <button class="copy-button" onclick="copyToClipboard('{{ folder_path }}')">Copia Percorso Cartella</button>
+        
+        <div class="details">
+            <h2 style="font-size: 1.1rem; margin-bottom: 10px; color: #333;">Dettagli</h2>
+            <p><strong>Cliente:</strong> {{ data.client_name }}</p>
+            <p><strong>Data Inizio Lavori:</strong> {{ data.date }}</p>
+            <p><strong>Scheda Num:</strong> {{ data.scheda_num }}</p>
+        </div>
+    </div>
+</body>
+</html>
