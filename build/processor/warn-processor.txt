@@ -64,4 +64,5 @@ missing module named 'watchdog.events' - imported by werkzeug._reloader (delayed
 missing module named watchdog - imported by werkzeug._reloader (delayed)
 missing module named '_typeshed.wsgi' - imported by werkzeug.exceptions (conditional), werkzeug.http (conditional), werkzeug.wsgi (conditional), werkzeug.utils (conditional), werkzeug.wrappers.response (conditional), werkzeug.test (conditional), werkzeug.datastructures.headers (conditional), werkzeug.formparser (conditional), werkzeug.wrappers.request (conditional), werkzeug.serving (conditional), werkzeug.debug (conditional), werkzeug.middleware.shared_data (conditional), werkzeug.local (conditional), werkzeug.routing.exceptions (conditional), werkzeug.routing.map (conditional), flask.typing (conditional), flask.ctx (conditional), flask.testing (conditional), flask.cli (conditional), flask.app (conditional)
 missing module named asgiref - imported by flask.app (delayed, optional)
-missing module named dotenv - imported by flask.cli (delayed, optional)
+missing module named 'IPython.core' - imported by dotenv.ipython (top-level)
+missing module named IPython - imported by dotenv.ipython (top-level)

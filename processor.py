@@ -24,6 +24,7 @@ app.config['MODEL_FILE_PATH'] = os.path.join(app.root_path, 'static', 'EC MODELL
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['EXCEL_FOLDER'], exist_ok=True)
 
+
 @app.route('/')
 def index():
     # Render the main page and check if there is an error to display
@@ -33,7 +34,7 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     file = request.files['file']
-    base_path = request.form['base_path']
+    base_path = os.path.abspath(request.form['base_path'])
     costo_orario_ditta = float(request.form['costo_orario'])
 
     # Check if a file was uploaded
@@ -52,18 +53,29 @@ def upload_file():
             return redirect(url_for('index', error=error_message))
 
         # Process PDF and generate Excel
-        excel_path = process_pdf(file, filename, costo_orario_ditta, base_path=base_path, data=data)
+        excel_path, file_renamed_or_old_format = process_pdf(file, filename, costo_orario_ditta, base_path=base_path, data=data)
 
-        if excel_path:
-            folder_path = os.path.dirname(excel_path)
-            return render_template('upload_success.html', folder_path=folder_path, data=data or {})
-        else:
-            print("Excel file was not created successfully.")
-            return redirect(url_for('index', error="Error: Excel file was not created successfully."))
+        # Check if the Excel file is None due to an old format
+        if excel_path is None and file_renamed_or_old_format:
+            print("⚠ Incompatible Excel format detected.")
+            return render_template('upload_success.html', 
+                                   folder_path=None, 
+                                   base_path=base_path, 
+                                   data=data, 
+                                   file_renamed=False, 
+                                   old_format=True)
+
+        # Proceed with the normal flow if no format issue
+        folder_path = os.path.dirname(excel_path)
+        return render_template('upload_success.html', 
+                               folder_path=folder_path, 
+                               base_path=base_path, 
+                               data=data, 
+                               file_renamed=file_renamed_or_old_format)
+
     else:
         print("Invalid file type. Please upload a PDF file.")
         return redirect(url_for('index', error="Invalid file type. Please upload a PDF file."))
-
 def extract_pdf_data(file):
     """Extracts structured data from the PDF using regex patterns."""
     try:
@@ -73,7 +85,7 @@ def extract_pdf_data(file):
         
         # Define patterns for extracting data
         patterns = {
-            "client_name": r"Data Inizio Lavori:\s+\d{2}/\d{2}/\d{2}\s+([A-Z\s]+)\s+Imponibile",
+            "client_name": r"Data Inizio Lavori:\s+\d{2}/\d{2}/\d{2}\s+([\w\sàèéìòùçÀÈÉÌÒÙÇA-Za-z]+)\s+Imponibile",
             "date": r"Data Inizio Lavori:\s+(\d{2}/\d{2}/\d{2})",
             "scheda_num": r"Scheda num:\s+(\d+)",
             "valore_tot_manodopera": r"Valore Tot\. manodopera\s+€\s*([\d,.]+)",
@@ -102,11 +114,11 @@ def extract_pdf_data(file):
 def process_pdf(file, filename, costo_orario_ditta, base_path, data):
     if not data:
         print("Data is missing, skipping process_pdf")
-        return None
+        return None, False
 
     client_folder_name = f"EC {data['client_name'].title()}"
     client_folder_path = os.path.join(base_path, client_folder_name)
-    calcoli_folder_path=os.path.join(client_folder_path, "CALCOLI")
+    calcoli_folder_path = os.path.join(client_folder_path, "CALCOLI")
     schede_costi_folder_path = os.path.join(client_folder_path, "CALCOLI/SCHEDE COSTI")
     schede_cliente_folder_path = os.path.join(client_folder_path, "CALCOLI/SCHEDE CLIENTE")
     inviati_folder_path = os.path.join(client_folder_path, "INVIATI")
@@ -116,9 +128,50 @@ def process_pdf(file, filename, costo_orario_ditta, base_path, data):
     os.makedirs(schede_costi_folder_path, exist_ok=True)
     os.makedirs(inviati_folder_path, exist_ok=True)
 
-    # Save the PDF directly in schede_costi_folder_path
-    pdf_path = os.path.join(schede_costi_folder_path, filename)
-    file.save(pdf_path)  # Save the PDF only in schede_costi_folder_path
+    # Save the uploaded file to the "Schede Costi" folder
+    file_renamed = False
+    pdf_path = os.path.abspath(os.path.join(schede_costi_folder_path, filename))
+
+    # Append '_new' with an incremental number if the file already exists
+    base_name, ext = os.path.splitext(filename)
+    counter = 1
+    new_path = pdf_path
+
+    # Increment the counter until a unique filename is found
+    while os.path.exists(new_path):
+        new_filename = f"{base_name}_new{counter}{ext}"
+        new_path = os.path.abspath(os.path.join(schede_costi_folder_path, new_filename))
+        file_renamed = True
+        counter += 1
+
+    pdf_path = new_path
+    if counter > 1:
+        print(f"File already exists. Saving as: {os.path.basename(pdf_path)}")
+
+    # Ensure the file is readable before saving
+    try:
+        file.seek(0)  # Reset pointer
+        file_content = file.read()
+        print(f"File size: {len(file_content)} bytes")  # Ensure the file has content
+        file.seek(0)  # Reset again for saving
+    except Exception as e:
+        raise ValueError(f"Error reading uploaded file: {e}")
+
+    # Save to the destination and verify
+    try:
+        print(f"Saving file to: {pdf_path}")
+        file.save(pdf_path)
+
+        # Test the saved file
+        with open(pdf_path, 'rb') as f:
+            f.read()  # Try reading the file
+        print(f"File saved and verified at {pdf_path}")
+    except Exception as e:
+        raise ValueError(f"Error saving file: {e}")
+
+    # Verify the saved file exists and is readable
+    if not os.path.exists(pdf_path):
+        raise ValueError("File was not saved properly!")
 
     # Define the path to the Excel file and the model template
     excel_file_path = os.path.join(calcoli_folder_path, f"EC {data['client_name'].title()}.xlsx")
@@ -128,9 +181,16 @@ def process_pdf(file, filename, costo_orario_ditta, base_path, data):
     if not os.path.exists(excel_file_path):
         print(f"Creating Excel file from template at {model_file_path}")
         shutil.copyfile(model_file_path, excel_file_path)
-    
+
     # Load the Excel workbook and select the "SCHEDE" sheet
     wb = load_workbook(excel_file_path)
+
+    # Check if the "SCHEDE" sheet exists
+    if "SCHEDE" not in wb.sheetnames:
+        print(f"⚠ Error: The Excel file '{excel_file_path}' does not have a 'SCHEDE' sheet. Possibly old format.")
+        return None, True  # Returning True here signals an incompatible format
+
+    # Select the "SCHEDE" sheet
     ws = wb["SCHEDE"]
 
     # Check if B1, B2, and B3 are empty to determine if the sheet is empty
@@ -147,7 +207,7 @@ def process_pdf(file, filename, costo_orario_ditta, base_path, data):
 
     wb.save(excel_file_path)
     print(f"Excel file saved at {excel_file_path}")
-    return excel_file_path
+    return excel_file_path, file_renamed
 
 def copy_row_format_and_formulas(ws, src_row, dest_row):
     """
@@ -217,9 +277,10 @@ def download_file(filename):
         return "Error: File not found", 404
 
 def open_browser():
-    webbrowser.open_new("http://127.0.0.1:5000")
+    # ✅ Prevent opening multiple tabs
+    if not os.environ.get("WERKZEUG_RUN_MAIN"):  
+        webbrowser.open("http://127.0.0.1:5000")
 
 if __name__ == '__main__':
-    # Start the browser a moment after the server starts
     Timer(1, open_browser).start()
-    app.run(debug=True)  # or app.run(port=5000) if debug mode is not needed
+    app.run(debug=False)  # ✅ Disable debug mode in .exe

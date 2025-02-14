@@ -82,8 +82,34 @@ font-family: 'Montserrat', sans-serif;
             transform: translateY(-2px);
         }
 
+/* Centered Path Box */
+.path-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Text box styling */
+        .path-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 1rem;
+            text-align: center;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            background: #f8f9fa;
+            color: #333;
+            cursor: text;
+        }
+
+        /* Copy button */
         .copy-button {
-            display: inline-block;
+            display: block;
+            width: 100%;
+            max-width: 250px;
             padding: 12px 24px;
             font-size: 1rem;
             font-weight: 600;
@@ -91,18 +117,28 @@ font-family: 'Montserrat', sans-serif;
             background-color: #007bff;
             border: none;
             border-radius: 8px;
-            margin-top: 20px;
             cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.1s ease;
+            transition: 0.3s;
             box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         }
-        .copy-button:hover {
-            background-color: #0056b3;
-            transform: translateY(-3px);
+        .copy-button:hover { background-color: #0056b3; transform: translateY(-2px); }
+        
+        .btn-process {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            font-weight: bold;
+            text-decoration: none;
+            transition: 0.3s;
         }
 
+        .btn-process:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
         /* Details section */
         .details {
+            text-align: center;
             margin-top: 30px;
             font-size: 0.95rem;
             color: #555;
@@ -118,6 +154,7 @@ font-family: 'Montserrat', sans-serif;
             font-weight: 500;
         }
         .details strong {
+            text-align: center;
             color: #2d3e50;
             font-weight: 700;
         }
@@ -130,11 +167,26 @@ font-family: 'Montserrat', sans-serif;
     </style>
     <script>
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert("Folder path copied to clipboard!");
-            }).catch(() => {
-                alert("Failed to copy folder path.");
-            });
+            console.log("Original Path from Flask:", text); // Debugging Step 1
+
+            // Convert forward slashes to backslashes if Windows
+            if (navigator.platform.includes("Win")) {
+                text = text.replace(/\//g, "\\");
+            }
+
+            console.log("Converted Path Before Copying:", text); // Debugging Step 2
+
+            // Use a temporary text area to copy the path
+            let tempInput = document.createElement("textarea");
+            tempInput.value = text;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+
+            console.log("Final Copied Path:", tempInput.value); // Debugging Step 3
+
+            alert("📋 Percorso copiato correttamente!\nOra puoi incollarlo in Esplora file o 'Esegui' (Win + R).");
         }
     </script>
 </head>
@@ -144,18 +196,43 @@ font-family: 'Montserrat', sans-serif;
         
         <h1>Processo Completato!</h1>
         <p></p>
-        <p>Il tuo PDF è stato processato e salvato al seguente link:</p>
-        
-        <a href="file://{{ folder_path }}" class="open-folder" target="_blank">Apri Cartella</a>
-        
-        <button class="copy-button" onclick="copyToClipboard('{{ folder_path }}')">Copia Percorso Cartella</button>
-        
+        <p>Il tuo PDF è stato processato e salvato al seguente percorso:</p>
+        {% if file_renamed %}
+            <div style="color: red; margin-top: 10px;">
+                ⚠ Nota: Il file esisteva già, una nuova copia è stata salvata come <strong>_new</strong>.
+            </div>
+        {% endif %}
+        {% if old_format %}
+            <div style="color: red; margin-top: 20px;">
+                ⚠ Attenzione: Il file Excel esistente ha un formato non compatibile e non è stato possibile elaborare i dati. La scheda è stata comunque salvata nella cartella esistente, in SCHEDE COSTI.
+            </div>
+        {% endif %}
+        <!-- Centered Path Box and Copy Button -->
+        <div class="path-container">
+            <input type="text" id="folderPath" class="path-box" value="{{ folder_path }}" readonly>
+            <button class="copy-button" onclick="copyPath()">📋 Copia Percorso</button>
+        </div>
+
         <div class="details">
-            <h2 style="font-size: 1.1rem; margin-bottom: 10px; color: #333;">Dettagli</h2>
+            <h2 style="font-size: 1.1rem; color: #333;">Dettagli</h2>
             <p><strong>Cliente:</strong> {{ data.client_name }}</p>
             <p><strong>Data Inizio Lavori:</strong> {{ data.date }}</p>
             <p><strong>Scheda Num:</strong> {{ data.scheda_num }}</p>
         </div>
+
+        <a href="{{ url_for('index') }}" class="btn-process">🔄 Processa un altro PDF</a>
     </div>
+
+    <script>
+        function copyPath() {
+            let inputField = document.getElementById("folderPath");
+            inputField.select();
+            inputField.setSelectionRange(0, 99999); // For mobile compatibility
+            document.execCommand("copy");
+
+            alert("📋 Percorso copiato con successo!\nOra puoi incollarlo in Esplora file o 'Esegui' (Win + R).");
+        }
+    </script>
+
 </body>
 </html>
