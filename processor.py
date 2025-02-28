@@ -11,7 +11,10 @@ from openpyxl.worksheet.cell_range import CellRange
 from copy import copy
 from threading import Timer
 import webbrowser
+import re
 
+def sanitize_filename(name):
+    return re.sub(r'[<>:"/\\|?*]', '-', name)
 
 app = Flask(__name__)
 
@@ -85,7 +88,7 @@ def extract_pdf_data(file):
         
         # Define patterns for extracting data
         patterns = {
-            "client_name": r"Data Inizio Lavori:\s+\d{2}/\d{2}/\d{2}\s+([\w\sàèéìòùçÀÈÉÌÒÙÇA-Za-z]+)\s+Imponibile",
+            "client_name": r"Data Inizio Lavori:\s+\d{2}/\d{2}/\d{2}\s+([\w\sàèéìòùçÀÈÉÌÒÙÇA-Za-z/w/\.]+)\s+Imponibile",
             "date": r"Data Inizio Lavori:\s+(\d{2}/\d{2}/\d{2})",
             "scheda_num": r"Scheda num:\s+(\d+)",
             "valore_tot_manodopera": r"Valore Tot\. manodopera\s+€\s*([\d,.]+)",
@@ -96,6 +99,10 @@ def extract_pdf_data(file):
 
         data = {key: (re.search(pattern, text).group(1).strip() if re.search(pattern, text) else None)
                 for key, pattern in patterns.items()}
+        
+        # *Sanitize the extracted client name*
+        if data.get("client_name"):
+            data["client_name"] = sanitize_filename(data["client_name"])
 
         # Check if essential data is missing
         required_fields = ["client_name", "date", "scheda_num"]
@@ -116,7 +123,9 @@ def process_pdf(file, filename, costo_orario_ditta, base_path, data):
         print("Data is missing, skipping process_pdf")
         return None, False
 
-    client_folder_name = f"EC {data['client_name'].title()}"
+    client_name = sanitize_filename(data['client_name'])
+    print(client_name)
+    client_folder_name = f"EC {client_name}"
     client_folder_path = os.path.join(base_path, client_folder_name)
     calcoli_folder_path = os.path.join(client_folder_path, "CALCOLI")
     schede_costi_folder_path = os.path.join(client_folder_path, "CALCOLI/SCHEDE COSTI")
